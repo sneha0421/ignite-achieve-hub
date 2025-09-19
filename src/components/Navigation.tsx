@@ -1,9 +1,11 @@
 import { Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { GraduationCap, Users, Home } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
+import { GraduationCap, Users, Home, LogOut, LogIn } from "lucide-react";
 
 const Navigation = () => {
   const location = useLocation();
+  const { user, signOut } = useAuth();
   
   const isActive = (path: string) => location.pathname === path;
   
@@ -29,25 +31,48 @@ const Navigation = () => {
               </Link>
             </Button>
             
-            <Button
-              variant={isActive("/student") ? "default" : "ghost"}
-              asChild
-            >
-              <Link to="/student" className="flex items-center space-x-2">
-                <GraduationCap className="h-4 w-4" />
-                <span>Student Dashboard</span>
-              </Link>
-            </Button>
-            
-            <Button
-              variant={isActive("/faculty") ? "default" : "ghost"}
-              asChild
-            >
-              <Link to="/faculty" className="flex items-center space-x-2">
-                <Users className="h-4 w-4" />
-                <span>Faculty Panel</span>
-              </Link>
-            </Button>
+            {user ? (
+              <>
+                <Button
+                  variant={isActive("/student") ? "default" : "ghost"}
+                  asChild
+                >
+                  <Link to="/student" className="flex items-center space-x-2">
+                    <GraduationCap className="h-4 w-4" />
+                    <span>Student Dashboard</span>
+                  </Link>
+                </Button>
+                
+                <Button
+                  variant={isActive("/faculty") ? "default" : "ghost"}
+                  asChild
+                >
+                  <Link to="/faculty" className="flex items-center space-x-2">
+                    <Users className="h-4 w-4" />
+                    <span>Faculty Panel</span>
+                  </Link>
+                </Button>
+
+                <Button
+                  variant="outline"
+                  onClick={signOut}
+                  className="flex items-center space-x-2"
+                >
+                  <LogOut className="h-4 w-4" />
+                  <span>Sign Out</span>
+                </Button>
+              </>
+            ) : (
+              <Button
+                variant={isActive("/auth") ? "default" : "outline"}
+                asChild
+              >
+                <Link to="/auth" className="flex items-center space-x-2">
+                  <LogIn className="h-4 w-4" />
+                  <span>Sign In</span>
+                </Link>
+              </Button>
+            )}
           </nav>
         </div>
       </div>

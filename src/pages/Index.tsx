@@ -1,9 +1,11 @@
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useAuth } from "@/hooks/useAuth";
 import { GraduationCap, Trophy, Users, TrendingUp, Star, BookOpen } from "lucide-react";
 
 const Index = () => {
+  const { user } = useAuth();
   const features = [
     {
       icon: Trophy,
@@ -47,19 +49,30 @@ const Index = () => {
             </p>
             
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button size="lg" asChild className="bg-gradient-to-r from-primary to-accent hover:from-primary/90 hover:to-accent/90 shadow-medium">
-                <Link to="/student">
-                  <GraduationCap className="h-5 w-5 mr-2" />
-                  Student Dashboard
-                </Link>
-              </Button>
-              
-              <Button size="lg" variant="outline" asChild className="border-primary text-primary hover:bg-primary hover:text-white">
-                <Link to="/faculty">
-                  <Users className="h-5 w-5 mr-2" />
-                  Faculty Panel
-                </Link>
-              </Button>
+              {user ? (
+                <>
+                  <Button size="lg" asChild className="bg-gradient-to-r from-primary to-accent hover:from-primary/90 hover:to-accent/90 shadow-medium">
+                    <Link to="/student">
+                      <GraduationCap className="h-5 w-5 mr-2" />
+                      Student Dashboard
+                    </Link>
+                  </Button>
+                  
+                  <Button size="lg" variant="outline" asChild className="border-primary text-primary hover:bg-primary hover:text-white">
+                    <Link to="/faculty">
+                      <Users className="h-5 w-5 mr-2" />
+                      Faculty Panel
+                    </Link>
+                  </Button>
+                </>
+              ) : (
+                <Button size="lg" asChild className="bg-gradient-to-r from-primary to-accent hover:from-primary/90 hover:to-accent/90 shadow-medium">
+                  <Link to="/auth">
+                    <GraduationCap className="h-5 w-5 mr-2" />
+                    Get Started
+                  </Link>
+                </Button>
+              )}
             </div>
           </div>
         </div>
@@ -128,9 +141,9 @@ const Index = () => {
           </p>
           
           <Button size="lg" asChild className="bg-gradient-to-r from-accent to-primary hover:from-accent/90 hover:to-primary/90">
-            <Link to="/student">
+            <Link to={user ? "/student" : "/auth"}>
               <BookOpen className="h-5 w-5 mr-2" />
-              Get Started Today
+              {user ? "Go to Dashboard" : "Get Started Today"}
             </Link>
           </Button>
         </div>
