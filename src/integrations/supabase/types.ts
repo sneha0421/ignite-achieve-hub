@@ -14,12 +14,51 @@ export type Database = {
   }
   public: {
     Tables: {
+      activities: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          status: string
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          status?: string
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          status?: string
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "activities_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
           created_at: string
           full_name: string | null
           id: string
+          is_faculty: boolean | null
           role: string | null
           updated_at: string
           user_id: string
@@ -29,6 +68,7 @@ export type Database = {
           created_at?: string
           full_name?: string | null
           id?: string
+          is_faculty?: boolean | null
           role?: string | null
           updated_at?: string
           user_id: string
@@ -38,6 +78,7 @@ export type Database = {
           created_at?: string
           full_name?: string | null
           id?: string
+          is_faculty?: boolean | null
           role?: string | null
           updated_at?: string
           user_id?: string

@@ -3,9 +3,19 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
-import { Plus, TrendingUp, Target, Users, BookOpen, PenTool, Hash } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
+import { Plus, TrendingUp, Target, Users, BookOpen, PenTool, Hash, Clock } from "lucide-react";
+import { useState, useEffect } from "react";
 
 const StudentDashboard = () => {
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [activities, setActivities] = useState([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const quickActions = [
     { icon: PenTool, label: "Create Activity Post", color: "bg-primary" },
     { icon: BookOpen, label: "View Portfolio", color: "bg-accent" },
@@ -29,6 +39,71 @@ const StudentDashboard = () => {
     "#Certifications"
   ];
 
+  // Fetch pending activities
+  useEffect(() => {
+    fetchPendingActivities();
+  }, []);
+
+  const fetchPendingActivities = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('activities')
+        .select(`
+          *,
+          profiles!activities_user_id_fkey (
+            full_name
+          )
+        `)
+        .eq('status', 'pending')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setActivities(data || []);
+    } catch (error) {
+      console.error('Error fetching activities:', error);
+    }
+  };
+
+  const handleSubmitActivity = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user || !title.trim()) return;
+
+    setIsSubmitting(true);
+    try {
+      const { error } = await supabase
+        .from('activities')
+        .insert({
+          user_id: user.id,
+          title: title.trim(),
+          description: description.trim(),
+          status: 'pending'
+        });
+
+      if (error) throw error;
+
+      toast({
+        title: "Achievement Posted!",
+        description: "Your achievement has been shared successfully.",
+      });
+
+      // Clear form
+      setTitle("");
+      setDescription("");
+      
+      // Refresh activities
+      fetchPendingActivities();
+    } catch (error) {
+      console.error('Error creating activity:', error);
+      toast({
+        title: "Error",
+        description: "Failed to post your achievement. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   return (
     <div className="container mx-auto px-4 py-6">
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
@@ -43,20 +118,35 @@ const StudentDashboard = () => {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
-                <Input placeholder="What did you accomplish today?" className="text-lg" />
-                <Textarea placeholder="Tell us more about your achievement..." className="min-h-[100px]" />
+              <form onSubmit={handleSubmitActivity} className="space-y-4">
+                <Input 
+                  placeholder="What did you accomplish today?" 
+                  className="text-lg"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  required
+                />
+                <Textarea 
+                  placeholder="Tell us more about your achievement..." 
+                  className="min-h-[100px]"
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                />
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-2">
-                    <Button variant="outline" size="sm">Add Photo</Button>
-                    <Button variant="outline" size="sm">Add Tag</Button>
+                    <Button type="button" variant="outline" size="sm">Add Photo</Button>
+                    <Button type="button" variant="outline" size="sm">Add Tag</Button>
                   </div>
-                  <Button className="bg-gradient-to-r from-primary to-accent hover:from-primary/90 hover:to-accent/90">
+                  <Button 
+                    type="submit" 
+                    disabled={isSubmitting || !title.trim()}
+                    className="bg-gradient-to-r from-primary to-accent hover:from-primary/90 hover:to-accent/90"
+                  >
                     <Plus className="h-4 w-4 mr-2" />
-                    Post Achievement
+                    {isSubmitting ? "Posting..." : "Post Achievement"}
                   </Button>
                 </div>
-              </div>
+              </form>
             </CardContent>
           </Card>
 
@@ -84,16 +174,50 @@ const StudentDashboard = () => {
             </CardContent>
           </Card>
 
-          {/* Feed Placeholder */}
-          <Card className="shadow-soft">
-            <CardContent className="p-8 text-center">
-              <div className="text-muted-foreground">
-                <TrendingUp className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <h3 className="text-lg font-semibold mb-2">Your Feed Will Appear Here</h3>
-                <p>Start following topics and connecting with peers to see activity updates.</p>
-              </div>
-            </CardContent>
-          </Card>
+          {/* Activity Feed */}
+          <div className="space-y-4">
+            {activities.length > 0 ? (
+              activities.map((activity: any) => (
+                <Card key={activity.id} className="shadow-soft">
+                  <CardContent className="p-6">
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="flex items-center space-x-2">
+                        <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center">
+                          <span className="text-primary-foreground text-sm font-medium">
+                            {activity.profiles?.full_name?.charAt(0) || 'U'}
+                          </span>
+                        </div>
+                        <div>
+                          <p className="font-medium">{activity.profiles?.full_name || 'Anonymous'}</p>
+                          <div className="flex items-center text-sm text-muted-foreground">
+                            <Clock className="h-3 w-3 mr-1" />
+                            {new Date(activity.created_at).toLocaleDateString()}
+                          </div>
+                        </div>
+                      </div>
+                      <Badge variant="secondary" className="bg-warning/10 text-warning border-warning/20">
+                        Pending
+                      </Badge>
+                    </div>
+                    <h3 className="font-semibold text-lg mb-2">{activity.title}</h3>
+                    {activity.description && (
+                      <p className="text-muted-foreground leading-relaxed">{activity.description}</p>
+                    )}
+                  </CardContent>
+                </Card>
+              ))
+            ) : (
+              <Card className="shadow-soft">
+                <CardContent className="p-8 text-center">
+                  <div className="text-muted-foreground">
+                    <TrendingUp className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                    <h3 className="text-lg font-semibold mb-2">No Activities Yet</h3>
+                    <p>Share your first achievement to get started!</p>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </div>
         </div>
 
         {/* Right Sidebar */}
