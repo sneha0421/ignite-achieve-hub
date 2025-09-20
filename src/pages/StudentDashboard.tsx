@@ -8,10 +8,12 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Plus, TrendingUp, Target, Users, BookOpen, PenTool, Hash, Clock } from "lucide-react";
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 
 const StudentDashboard = () => {
   const { user } = useAuth();
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [activities, setActivities] = useState([]);
@@ -234,6 +236,7 @@ const StudentDashboard = () => {
                     key={index}
                     variant="ghost" 
                     className="w-full justify-start hover:bg-muted/50 text-left"
+                    onClick={() => action.label === "View Portfolio" ? navigate('/portfolio') : undefined}
                   >
                     <div className={`w-8 h-8 rounded-full ${action.color} flex items-center justify-center mr-3 shrink-0`}>
                       <action.icon className="h-4 w-4 text-white" />
