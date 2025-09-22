@@ -7,7 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Plus, TrendingUp, Target, Users, BookOpen, PenTool, Hash, Clock } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 
 const StudentDashboard = () => {
@@ -18,6 +18,11 @@ const StudentDashboard = () => {
   const [description, setDescription] = useState("");
   const [activities, setActivities] = useState([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [selectedPhoto, setSelectedPhoto] = useState<File | null>(null);
+  const [tags, setTags] = useState<string[]>([]);
+  const [tagInput, setTagInput] = useState("");
+  const [showTagInput, setShowTagInput] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const quickActions = [
     { icon: PenTool, label: "Create Activity Post", color: "bg-primary" },
     { icon: BookOpen, label: "View Portfolio", color: "bg-accent" },
@@ -66,6 +71,55 @@ const StudentDashboard = () => {
     }
   };
 
+  const handlePhotoSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Check file size (3KB = 3072 bytes)
+    if (file.size > 3072) {
+      toast({
+        title: "File Too Large",
+        description: "Photo must be smaller than 3KB. Please select a smaller image.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Check if it's an image
+    if (!file.type.startsWith('image/')) {
+      toast({
+        title: "Invalid File Type",
+        description: "Please select an image file.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setSelectedPhoto(file);
+    toast({
+      title: "Photo Selected",
+      description: `${file.name} (${(file.size / 1024).toFixed(1)}KB) ready to upload.`,
+    });
+  };
+
+  const handleAddTag = () => {
+    if (tagInput.trim() && !tags.includes(tagInput.trim())) {
+      setTags([...tags, tagInput.trim()]);
+      setTagInput("");
+    }
+  };
+
+  const handleRemoveTag = (tagToRemove: string) => {
+    setTags(tags.filter(tag => tag !== tagToRemove));
+  };
+
+  const handleTagInputKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleAddTag();
+    }
+  };
+
   const handleSubmitActivity = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user || !title.trim()) return;
@@ -91,6 +145,15 @@ const StudentDashboard = () => {
       // Clear form
       setTitle("");
       setDescription("");
+      setSelectedPhoto(null);
+      setTags([]);
+      setTagInput("");
+      setShowTagInput(false);
+      
+      // Reset file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
       
       // Refresh activities
       fetchPendingActivities();
@@ -134,10 +197,97 @@ const StudentDashboard = () => {
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                 />
+                
+                {/* Tags Display */}
+                {tags.length > 0 && (
+                  <div className="space-y-2">
+                    <div className="flex flex-wrap gap-2">
+                      {tags.map((tag, index) => (
+                        <Badge 
+                          key={index} 
+                          variant="secondary" 
+                          className="flex items-center gap-1"
+                        >
+                          #{tag}
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveTag(tag)}
+                            className="ml-1 hover:text-destructive"
+                          >
+                            ×
+                          </button>
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Tag Input */}
+                {showTagInput && (
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder="Type a tag and press Enter"
+                      value={tagInput}
+                      onChange={(e) => setTagInput(e.target.value)}
+                      onKeyPress={handleTagInputKeyPress}
+                      className="flex-1"
+                    />
+                    <Button 
+                      type="button" 
+                      onClick={handleAddTag}
+                      variant="outline"
+                      size="sm"
+                    >
+                      Add
+                    </Button>
+                  </div>
+                )}
+
+                {/* Selected Photo Display */}
+                {selectedPhoto && (
+                  <div className="flex items-center gap-2 p-2 bg-muted rounded-md">
+                    <span className="text-sm text-muted-foreground">
+                      📷 {selectedPhoto.name} ({(selectedPhoto.size / 1024).toFixed(1)}KB)
+                    </span>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setSelectedPhoto(null)}
+                      className="h-6 w-6 p-0"
+                    >
+                      ×
+                    </Button>
+                  </div>
+                )}
+
+                {/* Hidden File Input */}
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handlePhotoSelect}
+                  className="hidden"
+                />
+                
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-2">
-                    <Button type="button" variant="outline" size="sm">Add Photo</Button>
-                    <Button type="button" variant="outline" size="sm">Add Tag</Button>
+                    <Button 
+                      type="button" 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => fileInputRef.current?.click()}
+                    >
+                      Add Photo
+                    </Button>
+                    <Button 
+                      type="button" 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => setShowTagInput(!showTagInput)}
+                    >
+                      Add Tag
+                    </Button>
                   </div>
                   <Button 
                     type="submit" 
