@@ -4,6 +4,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Download, Share, Trophy } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
+import jsPDF from 'jspdf';
 
 interface Activity {
   id: string;
@@ -16,6 +18,7 @@ const Portfolio = () => {
   const { user } = useAuth();
   const [activities, setActivities] = useState<Activity[]>([]);
   const [loading, setLoading] = useState(true);
+  const { toast } = useToast();
 
   useEffect(() => {
     if (user) {
@@ -43,6 +46,93 @@ const Portfolio = () => {
     }
   };
 
+  const downloadPDF = () => {
+    const pdf = new jsPDF();
+    const userName = user?.user_metadata?.full_name || 'User';
+    
+    // Header
+    pdf.setFontSize(20);
+    pdf.text(`${userName}'s Portfolio`, 20, 30);
+    pdf.setFontSize(12);
+    pdf.text('Digital Resume & Achievements', 20, 40);
+    
+    // Achievements section
+    pdf.setFontSize(16);
+    pdf.text('Achievements', 20, 60);
+    
+    let yPosition = 75;
+    
+    if (activities.length === 0) {
+      pdf.setFontSize(12);
+      pdf.text('No achievements yet.', 20, yPosition);
+    } else {
+      activities.forEach((activity, index) => {
+        if (yPosition > 270) {
+          pdf.addPage();
+          yPosition = 20;
+        }
+        
+        pdf.setFontSize(14);
+        pdf.text(activity.title, 20, yPosition);
+        yPosition += 10;
+        
+        pdf.setFontSize(10);
+        const description = activity.description || '';
+        const lines = pdf.splitTextToSize(description, 170);
+        pdf.text(lines, 20, yPosition);
+        yPosition += lines.length * 5 + 5;
+        
+        const date = new Date(activity.created_at).toLocaleDateString('en-US', {
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric'
+        });
+        pdf.text(date, 20, yPosition);
+        yPosition += 15;
+      });
+    }
+    
+    pdf.save(`${userName}_Portfolio.pdf`);
+    toast({
+      title: "PDF Downloaded",
+      description: "Your portfolio has been downloaded successfully.",
+    });
+  };
+
+  const sharePortfolio = async () => {
+    const shareData = {
+      title: `${user?.user_metadata?.full_name || 'User'}'s Portfolio`,
+      text: 'Check out my digital portfolio and achievements!',
+      url: window.location.href,
+    };
+
+    if (navigator.share && navigator.canShare(shareData)) {
+      try {
+        await navigator.share(shareData);
+        toast({
+          title: "Shared Successfully",
+          description: "Portfolio shared successfully.",
+        });
+      } catch (error) {
+        console.error('Error sharing:', error);
+      }
+    } else {
+      // Fallback: copy link to clipboard
+      try {
+        await navigator.clipboard.writeText(window.location.href);
+        toast({
+          title: "Link Copied",
+          description: "Portfolio link copied to clipboard.",
+        });
+      } catch (error) {
+        toast({
+          title: "Share",
+          description: "Share this link: " + window.location.href,
+        });
+      }
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -63,11 +153,11 @@ const Portfolio = () => {
           
           {/* Action Buttons */}
           <div className="flex gap-4 mt-4">
-            <Button variant="outline" className="flex items-center gap-2">
+            <Button variant="outline" className="flex items-center gap-2" onClick={downloadPDF}>
               <Download className="h-4 w-4" />
               Download PDF
             </Button>
-            <Button variant="outline" className="flex items-center gap-2">
+            <Button variant="outline" className="flex items-center gap-2" onClick={sharePortfolio}>
               <Share className="h-4 w-4" />
               Share
             </Button>
