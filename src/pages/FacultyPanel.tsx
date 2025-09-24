@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { CheckCircle, MessageCircle, Clock } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
 
 interface Activity {
   id: string;
@@ -27,18 +28,32 @@ const FacultyPanel = () => {
   const [pendingAchievements, setPendingAchievements] = useState<ActivityWithProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
+  const { user } = useAuth();
 
   const fetchPendingActivities = async () => {
+    if (!user) return;
+    
     try {
+      // Get current faculty member's profile id
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('user_id', user.id)
+        .single();
+
+      if (profileError) throw profileError;
+
       const { data, error } = await supabase
         .from('activities')
         .select(`
           *,
-          profiles (
+          profiles!activities_user_id_fkey (
             full_name
           )
         `)
         .eq('status', 'pending')
+        .eq('approving_faculty_id', profile.id)
+        .neq('user_id', user.id)
         .order('created_at', { ascending: false });
 
       if (error) throw error;

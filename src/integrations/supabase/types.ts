@@ -16,6 +16,7 @@ export type Database = {
     Tables: {
       activities: {
         Row: {
+          approving_faculty_id: string | null
           created_at: string
           description: string | null
           evidence_url: string | null
@@ -26,6 +27,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          approving_faculty_id?: string | null
           created_at?: string
           description?: string | null
           evidence_url?: string | null
@@ -36,6 +38,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          approving_faculty_id?: string | null
           created_at?: string
           description?: string | null
           evidence_url?: string | null
@@ -46,6 +49,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "activities_approving_faculty_id_fkey"
+            columns: ["approving_faculty_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "activities_user_id_fkey"
             columns: ["user_id"]

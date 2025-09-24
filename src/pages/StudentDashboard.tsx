@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -22,6 +23,8 @@ const StudentDashboard = () => {
   const [tags, setTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState("");
   const [showTagInput, setShowTagInput] = useState(false);
+  const [facultyMembers, setFacultyMembers] = useState<{id: string, full_name: string}[]>([]);
+  const [selectedFacultyId, setSelectedFacultyId] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const quickActions = [
     { icon: PenTool, label: "Create Activity Post", color: "bg-primary" },
@@ -46,9 +49,30 @@ const StudentDashboard = () => {
     "#Certifications"
   ];
 
-  // Fetch pending activities
+  const fetchFacultyMembers = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, full_name')
+        .eq('is_faculty', true);
+
+      if (error) throw error;
+      
+      setFacultyMembers(data || []);
+    } catch (error) {
+      console.error('Error fetching faculty members:', error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch faculty members",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Fetch pending activities and faculty members
   useEffect(() => {
     fetchPendingActivities();
+    fetchFacultyMembers();
   }, []);
 
   const fetchPendingActivities = async () => {
@@ -124,6 +148,15 @@ const StudentDashboard = () => {
     e.preventDefault();
     if (!user || !title.trim()) return;
 
+    if (!selectedFacultyId) {
+      toast({
+        title: "Error",
+        description: "Please select a faculty member for approval",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsSubmitting(true);
     try {
       const { error } = await supabase
@@ -132,7 +165,8 @@ const StudentDashboard = () => {
           user_id: user.id,
           title: title.trim(),
           description: description.trim(),
-          status: 'pending'
+          status: 'pending',
+          approving_faculty_id: selectedFacultyId
         });
 
       if (error) throw error;
@@ -149,6 +183,7 @@ const StudentDashboard = () => {
       setTags([]);
       setTagInput("");
       setShowTagInput(false);
+      setSelectedFacultyId("");
       
       // Reset file input
       if (fileInputRef.current) {
@@ -196,7 +231,26 @@ const StudentDashboard = () => {
                   className="min-h-[100px]"
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
-                />
+                 />
+
+                {/* Faculty Selection */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-foreground">
+                    Select Faculty for Approval
+                  </label>
+                  <Select value={selectedFacultyId} onValueChange={setSelectedFacultyId}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Choose a faculty member" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {facultyMembers.map((faculty) => (
+                        <SelectItem key={faculty.id} value={faculty.id}>
+                          {faculty.full_name || 'Unnamed Faculty'}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
                 
                 {/* Tags Display */}
                 {tags.length > 0 && (
